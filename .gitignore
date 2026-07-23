@@ -1,0 +1,14 @@
+node_modules
+.env
+*.js
+*.js.map
+*.d.ts
+*.log
+*.out
+*.tmp
+.plan/
+.claude/
+CLAUDE.md
+.DS_Store
+Thumbs.db
+tmp/

@@ -1,0 +1,7 @@
+{
+  "extension": ["test.ts"],
+  "spec": ["lib/**/*.test.ts"],
+  "slow": 5000,
+  "timeout": 15000,
+  "node-option": ["import=tsx", "env-file-if-exists=.env"]
+}

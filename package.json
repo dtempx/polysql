@@ -1,0 +1,82 @@
+{
+  "name": "sqlspy",
+  "version": "1.0.1",
+  "description": "A simple data adapter that provides a single, consistent interface for querying across PostgreSQL, MySQL, SQL Server, SQLite DuckDB, BigQuery, and Snowflake",
+  "license": "MIT",
+  "type": "module",
+  "main": "index.js",
+  "engines": {
+    "node": ">=16"
+  },
+  "files": [
+    "index.js",
+    "index.d.ts",
+    "lib/*.js",
+    "lib/*.d.ts",
+    "README.md",
+    "LICENSE"
+  ],
+  "author": "Dave Templin <dtempx@gmail.com>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dtempx/sqlspy.git"
+  },
+  "bugs": {
+    "url": "https://github.com/dtempx/sqlspy/issues"
+  },
+  "homepage": "https://github.com/dtempx/sqlspy",
+  "keywords": [
+    "database",
+    "data adapter",
+    "data warehouse",
+    "duckdb",
+    "mysql",
+    "postgres",
+    "postgresql",
+    "sqlite",
+    "mssql",
+    "sqlserver",
+    "bigquery",
+    "snowflake",
+    "maria",
+    "mariadb",
+    "cockroach",
+    "cockroachdb",
+    "redshift",
+    "yugabyte",
+    "yugabytedb",
+    "alloy",
+    "alloydb",
+    "timescale",
+    "timescaledb",
+    "universal"
+  ],
+  "scripts": {
+    "build": "npx tsc",
+    "test": "npx mocha"
+  },
+  "dependencies": {
+    "@duckdb/node-api": "^1.5.4-r.1",
+    "@google-cloud/bigquery": "^8.3.1",
+    "better-sqlite3": "^12.11.1",
+    "chalk": "^5.6.2",
+    "mssql": "^12.7.0",
+    "mysql2": "^3.23.0",
+    "pg": "^8.22.0",
+    "snowflake-sdk": "^3.1.0"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/chai": "^5.2.3",
+    "@types/chai-as-promised": "^8.0.2",
+    "@types/mocha": "^10.0.10",
+    "@types/mssql": "^12.3.0",
+    "@types/node": "^26.1.1",
+    "@types/pg": "^8.20.0",
+    "chai": "^6.2.2",
+    "chai-as-promised": "^8.0.2",
+    "mocha": "^11.7.6",
+    "tsx": "^4.20.3",
+    "typescript": "^7.0.2"
+  }
+}

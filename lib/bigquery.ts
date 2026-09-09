@@ -41,7 +41,7 @@ export function createBigQuery(options?: BigQueryOptions): Connector {
 }
 
 // The default instance: lazily built from application default credentials on
-// first use, preserving the original `import { bigquery } from "sqlspy"` API.
+// first use, preserving the original `import { bigquery } from "polysql"` API.
 let defaultInstance: Connector | undefined;
 function getDefault(): Connector {
     return defaultInstance ??= new BigQueryConnector();

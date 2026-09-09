@@ -117,7 +117,7 @@ export function createSqlite(config: SqliteConfig = ":memory:"): Connector {
 }
 
 // The default instance: lazily built from `SQLITE_CONNECTION` (or ":memory:") on
-// first use, preserving the original `import { sqlite } from "sqlspy"` API.
+// first use, preserving the original `import { sqlite } from "polysql"` API.
 let defaultInstance: Connector | undefined;
 function getDefault(): Connector {
     return defaultInstance ??= new SqliteConnector(process.env.SQLITE_CONNECTION || ":memory:");

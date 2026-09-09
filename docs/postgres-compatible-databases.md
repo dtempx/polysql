@@ -1,6 +1,6 @@
 # Postgres-Compatible Databases
 
-Several databases speak the PostgreSQL wire protocol, so sqlspy's `postgres`
+Several databases speak the PostgreSQL wire protocol, so polysql's `postgres`
 connector talks to them with no code changes — you just point it at a different
 connection string. This covers **CockroachDB**, **Amazon Redshift**,
 **YugabyteDB**, **AlloyDB**, **TimescaleDB**, and others.
@@ -21,7 +21,7 @@ export POSTGRES_CONNECTION="postgres://user:pass@my-cluster.abc123.us-east-1.red
 ```
 
 ```javascript
-import { postgres } from "sqlspy";
+import { postgres } from "polysql";
 
 const rows = await postgres.query("SELECT * FROM events WHERE id = $1", [1]);
 ```
@@ -30,7 +30,7 @@ Or build an explicit instance — handy when connecting to a compatible database
 alongside a "real" Postgres, or to several at once:
 
 ```javascript
-import { createPostgres } from "sqlspy";
+import { createPostgres } from "polysql";
 
 const crdb = createPostgres("postgresql://user@host:26257/mydb?sslmode=verify-full");
 const rows = await crdb.query("SELECT * FROM events");
@@ -51,7 +51,7 @@ places that can surface through this connector:
 
 - **CockroachDB serialization retries.** CockroachDB uses `SERIALIZABLE`
   isolation and expects clients to retry transactions that fail with SQLSTATE
-  `40001`. sqlspy surfaces the error rather than retrying — wrap your
+  `40001`. polysql surfaces the error rather than retrying — wrap your
   transaction in a retry loop if you run into it under contention.
 
 - **Redshift `insert` at scale.** `insert()` builds a multi-row `INSERT ...

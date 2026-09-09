@@ -119,7 +119,7 @@ export function createMssql(config: MssqlConfig, opts?: { poolMax?: number }): M
 }
 
 // The default instance: lazily built from `MSSQL_CONNECTION` on first use, preserving
-// the `import { mssql } from "sqlspy"` API used by the other backends.
+// the `import { mssql } from "polysql"` API used by the other backends.
 let defaultInstance: MssqlConnector | undefined;
 function getDefault(): MssqlConnector {
     if (!defaultInstance) {

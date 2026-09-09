@@ -106,7 +106,7 @@ export function createPostgres(config: PostgresConfig, opts?: { poolMax?: number
 }
 
 // The default instance: lazily built from `POSTGRES_CONNECTION` on first use,
-// preserving the original `import { postgres } from "sqlspy"` API.
+// preserving the original `import { postgres } from "polysql"` API.
 let defaultInstance: PostgresConnector | undefined;
 function getDefault(): PostgresConnector {
     if (!defaultInstance) {

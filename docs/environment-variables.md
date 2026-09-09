@@ -1,7 +1,7 @@
 # Environment Variables
 
 Each connector's default instance (the one you get from `import { <name> } from
-"sqlspy"`) reads its connection info from an environment variable. Use this
+"polysql"`) reads its connection info from an environment variable. Use this
 table to find the exact variable and string format each one expects; the
 sections below document each connector in detail.
 
@@ -29,7 +29,7 @@ Connectors](multi-instance.md).
 ## BigQuery
 
 BigQuery uses Google Cloud's **application default credentials** rather than a
-sqlspy-specific variable. Point the standard Google variable at a service
+polysql-specific variable. Point the standard Google variable at a service
 account key file:
 
 ```bash
@@ -57,7 +57,7 @@ If the private key file is passphrase-encrypted, add `,privateKeyPass:<passphras
 
 Add any other driver options the same way (e.g. `,schema:<schema>,role:<role>`).
 
-Notes on the string format — these come from sqlspy's parser, not the driver:
+Notes on the string format — these come from polysql's parser, not the driver:
 
 - Keys are case-sensitive and must use the driver's camelCase names
   (`privateKeyPath`, `privateKeyPass`). The snake_case aliases the driver

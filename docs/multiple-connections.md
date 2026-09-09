@@ -3,7 +3,7 @@
 By default each connector reads its connection info from the environment and shares a single connection across your whole app:
 
 ```javascript
-import { snowflake } from "sqlspy";
+import { snowflake } from "polysql";
 
 // Uses SNOWFLAKE_CONNECTION from the environment.
 const rows = await snowflake.query("SELECT 1");
@@ -16,7 +16,7 @@ That's the simplest way to connect. This page covers the two things the default 
 Each backend exposes a `create*` factory that takes connection info directly instead of reading the environment. Every factory returns a `Connector`—the same `query` / `execute` / `insert` / `safeValue` surface as the default export.
 
 ```javascript
-import { createBigQuery, createSnowflake, createSqlite } from "sqlspy";
+import { createBigQuery, createSnowflake, createSqlite } from "polysql";
 
 const bq = createBigQuery({ projectId: "my-project", keyFilename: "./key.json" });
 
@@ -52,7 +52,7 @@ const sf = createSnowflake(config, { poolMax: 4 });
 Because each factory call is independent, two warehouses (or projects, or databases) are just two instances:
 
 ```javascript
-import { createSnowflake } from "sqlspy";
+import { createSnowflake } from "polysql";
 
 const east = createSnowflake({ account: "acct", warehouse: "WH_EAST", /* ... */ });
 const west = createSnowflake({ account: "acct", warehouse: "WH_WEST", /* ... */ });
@@ -70,7 +70,7 @@ The same applies to `createBigQuery` (different projects/credentials) and `creat
 When the target backend isn't known until runtime — for example it comes from a config file — pick it by name with `connect`:
 
 ```javascript
-import { connect, connectorNames } from "sqlspy";
+import { connect, connectorNames } from "polysql";
 
 console.log(connectorNames);          // ["bigquery", "mssql", "mysql", "postgres", "snowflake", "sqlite"]
 
@@ -89,7 +89,7 @@ An unknown name throws with the list of supported connectors.
 All of the above return a value typed as `Connector`, so code that works against one backend works against any:
 
 ```typescript
-import type { Connector } from "sqlspy";
+import type { Connector } from "polysql";
 
 async function loadUsers(db: Connector) {
     return db.query("SELECT * FROM users");

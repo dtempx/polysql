@@ -130,7 +130,7 @@ export function createDuckDB(config: DuckDBConfig = ":memory:"): Connector {
 }
 
 // The default instance: lazily built from `DUCKDB_CONNECTION` (or ":memory:") on
-// first use, matching the `import { duckdb } from "sqlspy"` API of the other
+// first use, matching the `import { duckdb } from "polysql"` API of the other
 // backends.
 let defaultInstance: Connector | undefined;
 function getDefault(): Connector {

@@ -168,7 +168,7 @@ export function createSnowflake(config: SnowflakeConfig, opts?: { poolMax?: numb
 }
 
 // The default instance: lazily built from `SNOWFLAKE_CONNECTION` on first use,
-// preserving the original `import { snowflake } from "sqlspy"` API.
+// preserving the original `import { snowflake } from "polysql"` API.
 let defaultInstance: SnowflakeConnector | undefined;
 function getDefault(): SnowflakeConnector {
     if (!defaultInstance) {

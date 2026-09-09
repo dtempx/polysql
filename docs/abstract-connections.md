@@ -5,7 +5,7 @@ The `connect` function enables the creation of an *abstract* database connection
 You write against an abstact `Connector` interface:
 
 ```typescript
-import type { Connector } from "sqlspy";
+import type { Connector } from "polysql";
 
 async function topProducts(db: Connector) {
     return db.query("SELECT name, revenue FROM products ORDER BY revenue DESC LIMIT 10");
@@ -15,7 +15,7 @@ async function topProducts(db: Connector) {
 `topProducts` never says *which* warehouse it runs against. Something else—a config value, an environment variable, a per-request header — decides that, and hands the function a bound connection:
 
 ```typescript
-import { connect } from "sqlspy";
+import { connect } from "polysql";
 
 const db = connect(config.database);   // "bigquery" | "snowflake" | "sqlite" | ...
 await topProducts(db);

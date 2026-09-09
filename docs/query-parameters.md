@@ -1,7 +1,7 @@
 # Query Parameters
 
 Every connector's `query` and `execute` methods take an optional second argument
-of bind parameters. sqlspy accepts either an **array** (positional) or a
+of bind parameters. polysql accepts either an **array** (positional) or a
 plain **object** (named), but what each underlying database actually supports
 differs. Use this table to pick the right placeholder syntax.
 
@@ -17,7 +17,7 @@ differs. Use this table to pick the right placeholder syntax.
 
 > **Positional-only databases and objects:** For the databases that don't support
 > named parameters (PostgreSQL, MySQL, SQL Server, Snowflake), passing an object
-> still works — sqlspy flattens it to positional binds in key order via
+> still works — polysql flattens it to positional binds in key order via
 > `Object.values`. You still write positional placeholders in the SQL, so prefer
 > an array to avoid confusion.
 
@@ -26,7 +26,7 @@ differs. Use this table to pick the right placeholder syntax.
 ### Positional (works everywhere)
 
 ```javascript
-import { postgres, mysql, snowflake } from "sqlspy";
+import { postgres, mysql, snowflake } from "polysql";
 
 // PostgreSQL — $N
 await postgres.query("SELECT * FROM users WHERE age > $1 AND city = $2", [21, "NYC"]);
@@ -40,11 +40,11 @@ await snowflake.query("SELECT * FROM users WHERE age > ? AND city = ?", [21, "NY
 
 ### SQL Server — `@pN`
 
-sqlspy binds positional array values as `@p0`, `@p1`, … so reference them by
+polysql binds positional array values as `@p0`, `@p1`, … so reference them by
 those names in the SQL:
 
 ```javascript
-import { mssql } from "sqlspy";
+import { mssql } from "polysql";
 
 await mssql.query("SELECT * FROM users WHERE age > @p0 AND city = @p1", [21, "NYC"]);
 ```
@@ -54,7 +54,7 @@ await mssql.query("SELECT * FROM users WHERE age > @p0 AND city = @p1", [21, "NY
 Pass an object; the keys match the placeholder names:
 
 ```javascript
-import { sqlite, duckdb, bigquery } from "sqlspy";
+import { sqlite, duckdb, bigquery } from "polysql";
 
 // SQLite — @name / :name / $name
 await sqlite.query("SELECT * FROM users WHERE age > @age AND city = @city",

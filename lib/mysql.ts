@@ -106,7 +106,7 @@ export function createMysql(config: MysqlConfig, opts?: { poolMax?: number }): M
 }
 
 // The default instance: lazily built from `MYSQL_CONNECTION` on first use, preserving
-// the `import { mysql } from "sqlspy"` API used by the other backends.
+// the `import { mysql } from "polysql"` API used by the other backends.
 let defaultInstance: MysqlConnector | undefined;
 function getDefault(): MysqlConnector {
     if (!defaultInstance) {

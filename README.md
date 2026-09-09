@@ -1,8 +1,8 @@
-# SQLSpy
+# PolySQL
 
 A simple data adapter that provides a single, consistent interface for querying across PostgreSQL, MySQL, Microsoft SQL Server, SQLite, DuckDB, Snowflake, and BigQuery.
 
-Instead of juggling different SDKs and connection patterns, SQLSpy abstracts away the complexity so you can focus on your data. Really useful when dealing with more than one database.
+Instead of juggling different SDKs and connection patterns, PolySQL abstracts away the complexity so you can focus on your data. Really useful when dealing with more than one database.
 
 ## Supported Databases
 - **PostgreSQL** - Open-source relational database
@@ -17,10 +17,10 @@ Instead of juggling different SDKs and connection patterns, SQLSpy abstracts awa
 
 > MySQL also works with MySQL-compatible databases like MariaDB.
 
-## Why SQLSpy?
+## Why PolySQL?
 Use one simple, consistent interface instead of learning different APIs for each different database engine.
 
-Without SQLSpy you need a different coding pattern for each database engine...
+Without PolySQL you need a different coding pattern for each database engine...
 ```javascript
 
 // Postgres setup
@@ -40,9 +40,9 @@ const { recordset } = await pool.request().query('SELECT ...');
 ```
 
 
-With SQLSpy, same pattern everywhere...
+With PolySQL, same pattern everywhere...
 ```javascript
-import { postgres, mysql, mssql } from "sqlspy";
+import { postgres, mysql, mssql } from "polysql";
 
 const r1 = await postgres.query("SELECT ...");
 const r2 = await mysql.query("SELECT ...");
@@ -57,9 +57,9 @@ const r3 = await mssql.query("SELECT ...");
 
 ## Installation
 ```bash
-npm install sqlspy
+npm install polysql
 # or
-yarn add sqlspy
+yarn add polysql
 ```
 
 ## Quick Start
@@ -67,7 +67,7 @@ Each connector's default instance reads its connection info from an environment 
 
 ## Postgres example
 ```javascript
-import { postgres } from "sqlspy";
+import { postgres } from "polysql";
 
 await postgres.execute("CREATE TABLE IF NOT EXISTS users (id INTEGER, name TEXT)");
 await postgres.insert("users", [{ id: 1, name: "Alice" }, { id: 2, name: "Bob" }]);
@@ -82,7 +82,7 @@ postgres.close();
 
 ## MySQL example
 ```javascript
-import { mysql } from "sqlspy";
+import { mysql } from "polysql";
 
 await mysql.execute("CREATE TABLE IF NOT EXISTS users (id INTEGER, name TEXT)");
 await mysql.insert("users", [{ id: 1, name: "Alice" }, { id: 2, name: "Bob" }]);
@@ -97,7 +97,7 @@ mysql.close();
 
 ## SQL Server example
 ```javascript
-import { mssql } from "sqlspy";
+import { mssql } from "polysql";
 
 await mssql.execute("CREATE TABLE users (id INTEGER, name VARCHAR(255))");
 await mssql.insert("users", [{ id: 1, name: "Alice" }, { id: 2, name: "Bob" }]);
@@ -112,7 +112,7 @@ mssql.close();
 
 ## SQLite example
 ```javascript
-import { sqlite } from "sqlspy";
+import { sqlite } from "polysql";
 
 await sqlite.execute("CREATE TABLE IF NOT EXISTS users (id INTEGER, name TEXT)");
 await sqlite.insert("users", [{ id: 1, name: "Alice" }, { id: 2, name: "Bob" }]);
@@ -126,7 +126,7 @@ for (const row of rows)
 
 ## DuckDB example
 ```javascript
-import { duckdb } from "sqlspy";
+import { duckdb } from "polysql";
 
 await duckdb.execute("CREATE TABLE IF NOT EXISTS users (id INTEGER, name TEXT)");
 await duckdb.insert("users", [{ id: 1, name: "Alice" }, { id: 2, name: "Bob" }]);
@@ -141,7 +141,7 @@ duckdb.close();
 
 ## Snowflake example
 ```javascript
-import { snowflake } from "sqlspy";
+import { snowflake } from "polysql";
 
 const sql = "SELECT table_schema, table_name, table_type FROM INFORMATION_SCHEMA.TABLES WHERE table_schema != 'INFORMATION_SCHEMA' LIMIT 10";
 
@@ -155,7 +155,7 @@ snowflake.close();
 
 ## BigQuery example
 ```javascript
-import { bigquery } from "sqlspy";
+import { bigquery } from "polysql";
 
 const sql = "SELECT word, COUNT(*) as word_count FROM bigquery-public-data.samples.shakespeare GROUP BY ALL ORDER BY 2 DESC LIMIT 10";
 

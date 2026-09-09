@@ -1,6 +1,6 @@
 # Local (Embedded) Databases
 
-Two of sqlspy's backends are **embedded**: the database is a file on your own
+Two of polysql's backends are **embedded**: the database is a file on your own
 disk (or lives entirely in memory), with no server to run and nothing to connect
 to over the network.
 
@@ -29,7 +29,7 @@ export DUCKDB_CONNECTION="./analytics.duckdb"
 ```
 
 ```javascript
-import { sqlite, duckdb } from "sqlspy";
+import { sqlite, duckdb } from "polysql";
 
 await sqlite.query("SELECT * FROM users");     // uses SQLITE_CONNECTION
 await duckdb.query("SELECT * FROM events");     // uses DUCKDB_CONNECTION
@@ -50,7 +50,7 @@ drivers use (`new Database(path)` for SQLite, `DuckDBInstance.create(path)` for
 DuckDB), so it should feel familiar.
 
 ```javascript
-import { createSqlite, createDuckDB } from "sqlspy";
+import { createSqlite, createDuckDB } from "polysql";
 
 const app = createSqlite("./data.db");
 const scratch = createSqlite();                 // omit for an in-memory database
@@ -68,8 +68,8 @@ server backends take, which keeps config-driven code uniform — you can build a
 selected without special-casing the embedded ones:
 
 ```javascript
-import { createDuckDB } from "sqlspy";
-import { connect } from "sqlspy";
+import { createDuckDB } from "polysql";
+import { connect } from "polysql";
 
 const db = createDuckDB({ file: "./analytics.duckdb" });
 

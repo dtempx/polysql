@@ -8,7 +8,7 @@ sections below document each connector in detail.
 | Connector | Variable | Format |
 |---|---|---|
 | BigQuery | `GOOGLE_APPLICATION_CREDENTIALS` | path to service account key JSON (or ambient credentials) |
-| Snowflake | `SNOWFLAKE_CONNECTION` | `key:value,key:value` (`account`, `username`, `password`, `database`, `warehouse`, …) |
+| Snowflake | `SNOWFLAKE_CONNECTION` | `key:value,key:value` (`account`, `username`, `authenticator`, `privateKeyPath`, `database`, `warehouse`, …) |
 | PostgreSQL | `POSTGRES_CONNECTION` | `postgres://<user>:<password>@<host>:<port>/<database>` |
 | MySQL | `MYSQL_CONNECTION` | `mysql://<user>:<password>@<host>:<port>/<database>` |
 | Microsoft SQL Server | `MSSQL_CONNECTION` | `Server=<host>,<port>;Database=<database>;User Id=<user>;Password=<password>;Encrypt=true` |
@@ -44,13 +44,46 @@ at all.
 ## Snowflake
 
 Set `SNOWFLAKE_CONNECTION` to a comma-separated `key:value` string. Keys map
-directly to the Snowflake driver's connection options:
+directly to the Snowflake driver's connection options. Snowflake authenticates
+with **key-pair authentication**: set `authenticator` to `SNOWFLAKE_JWT` and
+point `privateKeyPath` at the PEM-encoded private key file registered for the
+user:
 
 ```bash
-export SNOWFLAKE_CONNECTION="account:<account>,username:<user>,password:<password>,database:<database>,warehouse:<warehouse>"
+export SNOWFLAKE_CONNECTION="account:<account>,username:<user>,authenticator:SNOWFLAKE_JWT,privateKeyPath:<path-to-key>.p8,database:<database>,warehouse:<warehouse>"
 ```
 
+If the private key file is passphrase-encrypted, add `,privateKeyPass:<passphrase>`.
+
 Add any other driver options the same way (e.g. `,schema:<schema>,role:<role>`).
+
+Notes on the string format — these come from sqlspy's parser, not the driver:
+
+- Keys are case-sensitive and must use the driver's camelCase names
+  (`privateKeyPath`, `privateKeyPass`). The snake_case aliases the driver
+  accepts in `connections.toml` (such as `private_key_file`) are not
+  recognized here.
+- Values cannot contain a comma or a colon. The parser splits on commas, then
+  keeps only the text before the first colon of each pair, so a Windows path
+  such as `C:\keys\rsa_key.p8` is truncated to `C`. Use a path without a drive
+  letter, or build an explicit instance and pass a `ConnectionOptions` object
+  instead of a string — see [Multi-Instance Connectors](multi-instance.md).
+- The driver's inline `privateKey` option (the PEM text itself) is not
+  practical in the string form: the PEM needs real newlines and the parser does
+  no unescaping. Use `privateKeyPath`.
+- With `VERBOSE=1` the connector logs its connection options at startup and
+  masks only `password`. A `privateKeyPass` value will appear in that log, so
+  avoid verbose mode where logs are captured.
+
+Optional — re-enable the Snowflake driver's own logging. The Snowflake Node
+driver writes log output to the console and to a `snowflake.log` file by
+default (which can be distracting). This behavior will be disabled unless
+`SNOWFLAKE_DISABLE_LOGGING` is set to any value other than `1` to leave the
+driver's logging at its default:
+
+```bash
+export SNOWFLAKE_DISABLE_LOGGING="0"
+```
 
 Optional — cap the connection pool size (defaults to `1`):
 

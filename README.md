@@ -151,7 +151,7 @@ for (const row of rows)
 snowflake.close();
 ```
 
-> Set the `SNOWFLAKE_CONNECTION` environment variable to a value like `account:myaccount,username:myuser,password:mypass,database:mydb,warehouse:mywh`.
+> Set the `SNOWFLAKE_CONNECTION` environment variable to a value like `account:myaccount,username:myuser,authenticator:SNOWFLAKE_JWT,privateKeyPath:/path/to/rsa_key.p8,database:mydb,warehouse:mywh`. See [Environment Variables](docs/environment-variables.md#snowflake) for details on key-pair authentication.
 
 ## BigQuery example
 ```javascript

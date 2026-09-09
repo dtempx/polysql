@@ -2,6 +2,9 @@ import snowflake from "snowflake-sdk";
 import chalk from "chalk";
 import { BaseConnector, logExecute, logExecuteResult, logQueryResult, safeValue, sleep, wrapQueryError } from "./utilities.js";
 
+if (process.env.SNOWFLAKE_DISABLE_LOGGING === "1" ||  process.env.SNOWFLAKE_DISABLE_LOGGING == undefined)
+    snowflake.configure({ logLevel: "OFF" });
+
 export interface LoadResult {
     file: string;
     status: string;

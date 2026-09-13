@@ -1,6 +1,14 @@
-import mssql from "mssql";
+import type mssql from "mssql";
 import chalk from "chalk";
-import { BaseConnector, logExecute, logExecuteResult, logQuery, logQueryResult, safeValue, wrapQueryError, type Connector } from "./utilities.js";
+import { BaseConnector, interopDefault, loadDriver, logExecute, logExecuteResult, logQuery, logQueryResult, safeValue, wrapQueryError } from "./utilities.js";
+
+// `mssql` is an optional peer dependency, loaded on first use so that importing
+// polysql does not require it to be installed. See `loadDriver`.
+type Driver = typeof import("mssql");
+let driver: Promise<Driver> | undefined;
+function loadMssql(): Promise<Driver> {
+    return driver ??= loadDriver("mssql", "SQL Server", () => import("mssql").then(module => interopDefault<Driver>(module)));
+}
 
 /** Connection info accepted by `MssqlConnector`: either the driver's own pool
  * config object, or a connection string (the same form the `MSSQL_CONNECTION`
@@ -15,18 +23,22 @@ export type MssqlConfig = mssql.config | string;
  *
  * `config` is either an mssql `config` object or a connection string. `poolMax`
  * defaults to `MSSQL_POOL_MAX` (or the mssql default).
+ *
+ * The pool (and the `mssql` driver itself) is created lazily on the first
+ * `query`/`execute`/`insert`, so constructing a connector never touches the
+ * driver. A connection string is parsed at that point too, since the parse
+ * borrows the driver.
  */
 export class MssqlConnector extends BaseConnector {
-    private poolConfig: mssql.config;
+    private config: MssqlConfig;
+    private poolMax: number | undefined;
     private pool: mssql.ConnectionPool | undefined;
     private connecting: Promise<mssql.ConnectionPool> | undefined;
 
     constructor(config: MssqlConfig, opts?: { poolMax?: number }) {
         super();
-        this.poolConfig = typeof config === "string" ? parseConnectionString(config) : { ...config };
-        const poolMax = opts?.poolMax ?? (parseInt(process.env.MSSQL_POOL_MAX!) || undefined);
-        if (poolMax !== undefined)
-            this.poolConfig.pool = { ...this.poolConfig.pool, max: poolMax };
+        this.config = typeof config === "string" ? config : { ...config };
+        this.poolMax = opts?.poolMax ?? (parseInt(process.env.MSSQL_POOL_MAX!) || undefined);
     }
 
     private async getPool(): Promise<mssql.ConnectionPool> {
@@ -35,21 +47,26 @@ export class MssqlConnector extends BaseConnector {
         // mssql's connect() is async, so guard against concurrent callers racing
         // to open two pools by memoizing the in-flight connect promise.
         if (!this.connecting) {
-            if (process.env.VERBOSE)
-                console.log(chalk.gray(`\nMSSQL CONNECTION: ${JSON.stringify({ ...this.poolConfig, password: undefined }, null, 2)}`));
-            this.connecting = new mssql.ConnectionPool(this.poolConfig).connect();
+            this.connecting = loadMssql().then(mssql => {
+                const poolConfig = typeof this.config === "string" ? parseConnectionString(mssql, this.config) : { ...this.config };
+                if (this.poolMax !== undefined)
+                    poolConfig.pool = { ...poolConfig.pool, max: this.poolMax };
+                if (process.env.VERBOSE)
+                    console.log(chalk.gray(`\nMSSQL CONNECTION: ${JSON.stringify({ ...poolConfig, password: undefined }, null, 2)}`));
+                return new mssql.ConnectionPool(poolConfig).connect();
+            });
         }
         this.pool = await this.connecting;
         return this.pool;
     }
 
     async query<T = any>(query: string, params?: Record<string, any> | any[]): Promise<T[]> {
+        const pool = await this.getPool();
         const t0 = Date.now();
         logQuery(query, params);
 
         let rows: T[];
         try {
-            const pool = await this.getPool();
             const { text, request } = bindRequest(pool.request(), query, params);
             const result = await request.query(text);
             rows = result.recordset as T[] ?? [];
@@ -64,11 +81,11 @@ export class MssqlConnector extends BaseConnector {
     }
 
     async execute(query: string, params?: Record<string, any> | any[]): Promise<void> {
+        const pool = await this.getPool();
         const t0 = Date.now();
         logExecute(query, params);
 
         try {
-            const pool = await this.getPool();
             const { text, request } = bindRequest(pool.request(), query, params);
             await request.query(text);
         }
@@ -83,7 +100,7 @@ export class MssqlConnector extends BaseConnector {
      * Close the connection pool, releasing its open sockets. Call this on
      * shutdown so the process (or a test runner) can exit cleanly instead of
      * hanging on the pool's still-open connections. Safe to call when no pool was
-     * ever created.
+     * ever created (or the driver failed to load).
      */
     async close(): Promise<void> {
         if (this.connecting) {
@@ -181,10 +198,10 @@ function formatBinds(params?: Record<string, any> | any[]): any[] {
 // parses the string natively in the ConnectionPool constructor and exposes the
 // result on `.config`, so build a throwaway pool to borrow that parse — this
 // gives us a real object to merge poolMax into and to redact for VERBOSE.
-function parseConnectionString(value: string): mssql.config {
+function parseConnectionString(driver: Driver, value: string): mssql.config {
     // `.config` is populated from the parsed string at runtime but is absent
     // from mssql's type declarations, so reach for it through an any-cast.
-    return (new mssql.ConnectionPool(value) as any).config as mssql.config;
+    return (new driver.ConnectionPool(value) as any).config as mssql.config;
 }
 
 // mssql returns plain objects with the column-case from the query and JS

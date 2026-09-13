@@ -105,3 +105,47 @@ export function logExecuteResult(t0: number): void {
     if (process.env.VERBOSE)
         console.log(chalk.gray(`(query executed in ${((Date.now() - t0) / 1000).toFixed(3)} seconds)`));
 }
+
+/**
+ * Load a database driver on first use.
+ *
+ * Every driver is an optional peer dependency: installing polysql installs none
+ * of them, and importing polysql must not fail when some (or all) are absent.
+ * Each connector therefore imports its driver through this helper the first time
+ * it needs one, with a literal `import("<package>")` so bundlers can still see
+ * the specifier. A missing package is reported with the name to install rather
+ * than Node's raw resolution error; any other failure is passed through as-is.
+ *
+ * Callers cache the returned promise so the driver is resolved once per process.
+ */
+export async function loadDriver<T>(pkg: string, connector: string, importer: () => Promise<T>): Promise<T> {
+    try {
+        return await importer();
+    }
+    catch (err) {
+        if (isModuleNotFound(err, pkg))
+            throw new Error(`The ${connector} connector requires the "${pkg}" package, which is not installed. Install it with: npm install ${pkg}`);
+        throw err;
+    }
+}
+
+// True when `err` is Node's module-resolution failure for `pkg` itself (as
+// opposed to a package that `pkg` depends on, which should surface unchanged).
+function isModuleNotFound(err: unknown, pkg: string): boolean {
+    const code = (err as { code?: unknown } | undefined)?.code;
+    if (code !== "ERR_MODULE_NOT_FOUND" && code !== "MODULE_NOT_FOUND")
+        return false;
+    const message = err instanceof Error ? err.message : String(err);
+    return message.includes(`'${pkg}'`) || message.includes(`"${pkg}"`);
+}
+
+/**
+ * Resolve the value a CommonJS driver exports (`module.exports`) from the
+ * namespace object a dynamic `import()` of it returns, which wraps that value as
+ * `default`. A module with no `default` (a native ES module) is returned as-is.
+ * Typed against the driver's own `typeof import("<pkg>")`, which for an
+ * `export =` package is the export value rather than the namespace.
+ */
+export function interopDefault<T>(module: T | { default: T }): T {
+    return typeof module === "object" && module !== null && "default" in module ? (module as { default: T }).default : module as T;
+}

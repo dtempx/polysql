@@ -8,7 +8,7 @@ Instead of juggling different SDKs and connection patterns, PolySQL abstracts aw
 - **PostgreSQL** - Open-source relational database
 - **MySQL** - Another open-source relational database
 - **Microsoft SQL Server** - Microsoft proprietary relational database engine
-- **SQLite** - Embedded, file-based (or in-memory) SQL database
+- **SQLite** - Embedded, file-based (or in-memory) SQL database *(via `better-sqlite3`, or Node's built-in `node:sqlite`)*
 - **DuckDB** - Embedded, file-based (or in-memory) analytical (OLAP) database
 - **Snowflake** - Multi-cloud data warehouse *(runs on AWS, Azure, or GCP)*
 - **BigQuery** - Google Cloud's serverless data warehouse
@@ -16,6 +16,8 @@ Instead of juggling different SDKs and connection patterns, PolySQL abstracts aw
 > Postgres also works with databases that speak the PostgreSQL wire protocol—namely CockroachDB, Redshift, YugabyteDB, AlloyDB, TimescaleDB. [Learn more](docs/postgres-compatible-databases.md)
 
 > MySQL also works with MySQL-compatible databases like MariaDB.
+
+> Each database is reached through its own driver module, installed separately. [See the full list, with versions and install sizes](docs/supported-databases.md)
 
 ## Why PolySQL?
 Use one simple, consistent interface instead of learning different APIs for each different database engine.
@@ -56,11 +58,38 @@ const r3 = await mssql.query("SELECT ...");
 - **Parameterized Queries**: Supports safe parameter binding—positional and/or named depending on the database. [Learn more](docs/query-parameters.md)
 
 ## Installation
+`npm install polysql` covers PostgreSQL out of the box — `pg` is small enough (~95 kB) that it ships as a regular dependency. On Node 22.5+ you also get SQLite for free through Node's built-in `node:sqlite`. Add a driver for any other database you use:
+
 ```bash
-npm install polysql
-# or
-yarn add polysql
+npm install polysql                 # PostgreSQL + node:sqlite, nothing else needed
+npm install polysql mysql2          # MySQL / MariaDB
+npm install polysql mssql           # Microsoft SQL Server
+npm install polysql better-sqlite3  # SQLite via better-sqlite3
+npm install polysql @duckdb/node-api        # DuckDB
+npm install polysql snowflake-sdk           # Snowflake
+npm install polysql @google-cloud/bigquery  # BigQuery
 ```
+
+The remaining drivers are *optional peer dependencies*: installing polysql installs none of them, so a project only pays for the databases it talks to. Each of those connectors loads its driver the first time it runs a query. If the driver is missing you get an error naming the package to install:
+
+```
+The MySQL connector requires the "mysql2" package, which is not installed. Install it with: npm install mysql2
+```
+
+| Connector | Class | Driver package |
+|---|---|---|
+| `postgres` | `PostgresConnector` | `pg` *(bundled with polysql)* |
+| `mysql` | `MysqlConnector` | `mysql2` |
+| `mssql` | `MssqlConnector` | `mssql` |
+| `sqlite` | `SqliteConnector` | `better-sqlite3` |
+| `nodesqlite` | `NodeSqliteConnector` | `node:sqlite` *(built into Node 22.5+)* |
+| `duckdb` | `DuckDBConnector` | `@duckdb/node-api` |
+| `snowflake` | `SnowflakeConnector` | `snowflake-sdk` |
+| `bigquery` | `BigQueryConnector` | `@google-cloud/bigquery` |
+
+> Versions, install footprint, and memory cost for each driver are in [Supported Databases](docs/supported-databases.md).
+
+> For TypeScript, `mssql` ships its types separately: add `@types/mssql` alongside it. `@types/pg` comes with polysql.
 
 ## Quick Start
 Each connector's default instance reads its connection info from an environment variable. The formats for every connector are documented in [Environment Variables](docs/environment-variables.md).
@@ -123,6 +152,25 @@ for (const row of rows)
 ```
 
 > Set the `SQLITE_CONNECTION` environment variable to a value that specifies the path to a local file, or leave unspecified and it will default to an in-memory database.
+
+## SQLite example (Node built-in, no install)
+On Node 22.5 and later, the `nodesqlite` connector uses Node's own `node:sqlite` module instead of `better-sqlite3` — the same engine and the same files, with nothing to install and no native compile step.
+
+```javascript
+import { nodesqlite } from "polysql";
+
+await nodesqlite.execute("CREATE TABLE IF NOT EXISTS users (id INTEGER, name TEXT)");
+await nodesqlite.insert("users", [{ id: 1, name: "Alice" }, { id: 2, name: "Bob" }]);
+
+const rows = await nodesqlite.query("SELECT * FROM users WHERE id = ?", [1]);
+for (const row of rows)
+    console.log(JSON.stringify(row));
+nodesqlite.close();
+```
+
+> Set the `NODE_SQLITE_CONNECTION` environment variable to a value that specifies the path to a local file, or leave unspecified and it will default to an in-memory database.
+
+> Both SQLite backends are synchronous engines that polysql adapts to its async interface, so `await` works the same way on either. [Compare them](docs/supported-databases.md#two-ways-to-reach-sqlite)
 
 ## DuckDB example
 ```javascript

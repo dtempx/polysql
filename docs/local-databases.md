@@ -4,7 +4,10 @@ Two of polysql's backends are **embedded**: the database is a file on your own
 disk (or lives entirely in memory), with no server to run and nothing to connect
 to over the network.
 
-- **SQLite** — the ubiquitous embedded transactional (OLTP) engine.
+- **SQLite** — the ubiquitous embedded transactional (OLTP) engine. Reachable two
+  ways: the `sqlite` connector (`better-sqlite3`) or, on Node 22.5+, the
+  `nodesqlite` connector backed by Node's built-in `node:sqlite` module.
+  [Compare them](supported-databases.md#two-ways-to-reach-sqlite)
 - **DuckDB** — an embedded analytical (OLAP) engine.
 
 The other five backends — PostgreSQL, MySQL, SQL Server, BigQuery, and Snowflake

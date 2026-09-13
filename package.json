@@ -1,6 +1,6 @@
 {
   "name": "polysql",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "A simple data adapter that provides a single, consistent interface for querying across PostgreSQL, MySQL, SQL Server, SQLite DuckDB, BigQuery, and Snowflake",
   "license": "MIT",
   "type": "module",
@@ -56,26 +56,54 @@
     "test": "npx mocha"
   },
   "dependencies": {
+    "chalk": "^5.6.2",
+    "pg": "^8.22.0"
+  },
+  "peerDependencies": {
     "@duckdb/node-api": "^1.5.4-r.1",
     "@google-cloud/bigquery": "^8.3.1",
-    "@types/mssql": "^12.3.0",
-    "@types/pg": "^8.20.0",
     "better-sqlite3": "^12.11.1",
-    "chalk": "^5.6.2",
     "mssql": "^12.7.0",
     "mysql2": "^3.23.0",
-    "pg": "^8.22.0",
     "snowflake-sdk": "^3.1.0"
   },
+  "peerDependenciesMeta": {
+    "@duckdb/node-api": {
+      "optional": true
+    },
+    "@google-cloud/bigquery": {
+      "optional": true
+    },
+    "better-sqlite3": {
+      "optional": true
+    },
+    "mssql": {
+      "optional": true
+    },
+    "mysql2": {
+      "optional": true
+    },
+    "snowflake-sdk": {
+      "optional": true
+    }
+  },
   "devDependencies": {
+    "@duckdb/node-api": "^1.5.4-r.1",
+    "@google-cloud/bigquery": "^8.3.1",
     "@types/better-sqlite3": "^7.6.13",
     "@types/chai": "^5.2.3",
     "@types/chai-as-promised": "^8.0.2",
     "@types/mocha": "^10.0.10",
+    "@types/mssql": "^12.3.0",
     "@types/node": "^26.1.1",
+    "@types/pg": "^8.20.0",
+    "better-sqlite3": "^12.11.1",
     "chai": "^6.2.2",
     "chai-as-promised": "^8.0.2",
     "mocha": "^11.7.6",
+    "mssql": "^12.7.0",
+    "mysql2": "^3.23.0",
+    "snowflake-sdk": "^3.1.0",
     "tsx": "^4.20.3",
     "typescript": "^7.0.2"
   }

@@ -2,6 +2,7 @@ import * as bigquery from "./bigquery.js";
 import * as duckdb from "./duckdb.js";
 import * as mssql from "./mssql.js";
 import * as mysql from "./mysql.js";
+import * as nodesqlite from "./node-sqlite.js";
 import * as postgres from "./postgres.js";
 import * as snowflake from "./snowflake.js";
 import * as sqlite from "./sqlite.js";
@@ -9,6 +10,7 @@ import { BigQueryConnector } from "./bigquery.js";
 import { DuckDBConnector } from "./duckdb.js";
 import { MssqlConnector } from "./mssql.js";
 import { MysqlConnector } from "./mysql.js";
+import { NodeSqliteConnector } from "./node-sqlite.js";
 import { PostgresConnector } from "./postgres.js";
 import { SnowflakeConnector } from "./snowflake.js";
 import { SqliteConnector } from "./sqlite.js";
@@ -24,6 +26,7 @@ const registry = {
     duckdb: { default: duckdb, create: (config?: any) => new DuckDBConnector(config) },
     mssql: { default: mssql, create: (config?: any) => new MssqlConnector(config) },
     mysql: { default: mysql, create: (config?: any) => new MysqlConnector(config) },
+    nodesqlite: { default: nodesqlite, create: (config?: any) => new NodeSqliteConnector(config) },
     postgres: { default: postgres, create: (config?: any) => new PostgresConnector(config) },
     snowflake: { default: snowflake, create: (config?: any) => new SnowflakeConnector(config) },
     sqlite: { default: sqlite, create: (config?: any) => new SqliteConnector(config) }

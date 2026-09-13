@@ -1,6 +1,13 @@
-import { DuckDBConnection, DuckDBInstance } from "@duckdb/node-api";
+import type { DuckDBConnection } from "@duckdb/node-api";
 import chalk from "chalk";
-import { BaseConnector, logExecute, logExecuteResult, logQuery, logQueryResult, safeValue, wrapQueryError, type Connector } from "./utilities.js";
+import { BaseConnector, loadDriver, logExecute, logExecuteResult, logQuery, logQueryResult, safeValue, wrapQueryError, type Connector } from "./utilities.js";
+
+// `@duckdb/node-api` is an optional peer dependency, loaded on first use so that
+// importing polysql does not require it to be installed. See `loadDriver`.
+let driver: Promise<typeof import("@duckdb/node-api")> | undefined;
+function loadDuckDB(): Promise<typeof import("@duckdb/node-api")> {
+    return driver ??= loadDriver("@duckdb/node-api", "DuckDB", () => import("@duckdb/node-api"));
+}
 
 /**
  * Where a local database's file lives on disk. Accept either a bare path string
@@ -23,9 +30,9 @@ function resolveFile(config: DuckDBConfig = ":memory:"): string {
  * its own instance/connection, so an app can open several databases at once. Omit
  * `config` to default to an in-memory database.
  *
- * DuckDB's Node bindings are asynchronous and the instance/connection are created
- * lazily on first use, so the (async) handshake happens inside `query`/`execute`
- * rather than in the constructor.
+ * DuckDB's Node bindings are asynchronous and the driver, instance and connection
+ * are all created lazily on first use, so the (async) handshake happens inside
+ * `query`/`execute` rather than in the constructor.
  */
 export class DuckDBConnector extends BaseConnector {
     private file: string;
@@ -40,18 +47,20 @@ export class DuckDBConnector extends BaseConnector {
         if (!this.connection) {
             if (process.env.VERBOSE)
                 console.log(chalk.gray(`\nDUCKDB DATABASE: ${this.file}`));
-            this.connection = DuckDBInstance.create(this.file).then(instance => instance.connect());
+            this.connection = loadDuckDB()
+                .then(({ DuckDBInstance }) => DuckDBInstance.create(this.file))
+                .then(instance => instance.connect());
         }
         return this.connection;
     }
 
     async query<T = any>(query: string, params?: Record<string, any> | any[]): Promise<T[]> {
+        const connection = await this.getConnection();
         const t0 = Date.now();
         logQuery(query, params);
 
         let rows: T[];
         try {
-            const connection = await this.getConnection();
             const reader = await connection.runAndReadAll(query, formatBinds(params));
             rows = reader.getRowObjectsJS() as T[];
         }
@@ -65,11 +74,11 @@ export class DuckDBConnector extends BaseConnector {
     }
 
     async execute(query: string, params?: Record<string, any> | any[]): Promise<void> {
+        const connection = await this.getConnection();
         const t0 = Date.now();
         logExecute(query, params);
 
         try {
-            const connection = await this.getConnection();
             await connection.run(query, formatBinds(params));
         }
         catch (err) {
@@ -82,12 +91,12 @@ export class DuckDBConnector extends BaseConnector {
     /**
      * Close the underlying connection. Provided for parity with the shared
      * connector surface; releases the connection (and file lock, if any). Safe to
-     * call when no connection was ever opened.
+     * call when no connection was ever opened (or the driver failed to load).
      */
     async close(): Promise<void> {
         if (this.connection) {
-            const connection = await this.connection;
-            connection.closeSync();
+            const connection = await this.connection.catch(() => undefined);
+            connection?.closeSync();
             this.connection = undefined;
         }
     }

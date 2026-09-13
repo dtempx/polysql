@@ -1,6 +1,14 @@
-import Database from "better-sqlite3";
+import type Database from "better-sqlite3";
 import chalk from "chalk";
-import { BaseConnector, logExecute, logExecuteResult, logQuery, logQueryResult, safeValue, wrapQueryError, type Connector } from "./utilities.js";
+import { BaseConnector, interopDefault, loadDriver, logExecute, logExecuteResult, logQuery, logQueryResult, safeValue, wrapQueryError, type Connector } from "./utilities.js";
+
+// `better-sqlite3` is an optional peer dependency, loaded on first use so that
+// importing polysql does not require it to be installed. See `loadDriver`.
+type Driver = typeof import("better-sqlite3");
+let driver: Promise<Driver> | undefined;
+function loadSqlite(): Promise<Driver> {
+    return driver ??= loadDriver("better-sqlite3", "SQLite", () => import("better-sqlite3").then(module => interopDefault<Driver>(module)));
+}
 
 /**
  * Where a local database's file lives on disk. Accept either a bare path string
@@ -22,33 +30,41 @@ function resolveFile(config: SqliteConfig = ":memory:"): string {
  * instead of reading `SQLITE_CONNECTION` from the environment. Each instance owns
  * its own connection, so an app can open several databases at once. Omit `config`
  * to default to an in-memory database.
+ *
+ * The database handle (and the `better-sqlite3` driver itself) is opened lazily
+ * on the first `query`/`execute`/`insert`, so constructing a connector never
+ * touches the driver.
  */
 export class SqliteConnector extends BaseConnector {
     private file: string;
-    private db: Database.Database | undefined;
+    private db: Promise<Database.Database> | undefined;
 
     constructor(config: SqliteConfig = ":memory:") {
         super();
         this.file = resolveFile(config);
     }
 
-    private getDatabase(): Database.Database {
+    private getDatabase(): Promise<Database.Database> {
         if (!this.db) {
-            this.db = new Database(this.file);
-            if (process.env.VERBOSE)
-                console.log(chalk.gray(`\nSQLITE DATABASE: ${this.file}`));
+            this.db = loadSqlite().then(Database => {
+                const db = new Database(this.file);
+                if (process.env.VERBOSE)
+                    console.log(chalk.gray(`\nSQLITE DATABASE: ${this.file}`));
+                return db;
+            });
         }
         return this.db;
     }
 
     async query<T = any>(query: string, params?: Record<string, any> | any[]): Promise<T[]> {
+        const db = await this.getDatabase();
         const t0 = Date.now();
         logQuery(query, params);
 
         let rows: T[];
         try {
             const binds = formatBinds(params);
-            rows = this.getDatabase().prepare(query).all(...binds) as T[];
+            rows = db.prepare(query).all(...binds) as T[];
         }
         catch (err) {
             throw wrapQueryError(err, query, params);
@@ -60,12 +76,13 @@ export class SqliteConnector extends BaseConnector {
     }
 
     async execute(query: string, params?: Record<string, any> | any[]): Promise<void> {
+        const db = await this.getDatabase();
         const t0 = Date.now();
         logExecute(query, params);
 
         try {
             const binds = formatBinds(params);
-            this.getDatabase().prepare(query).run(...binds);
+            db.prepare(query).run(...binds);
         }
         catch (err) {
             throw wrapQueryError(err, query, params);
@@ -78,11 +95,12 @@ export class SqliteConnector extends BaseConnector {
      * Close the underlying database handle. Provided for parity with the shared
      * connector surface; SQLite's handle is synchronous and does not keep the
      * process alive, but closing it releases the file lock. Safe to call when no
-     * database was ever opened.
+     * database was ever opened (or the driver failed to load).
      */
     async close(): Promise<void> {
         if (this.db) {
-            this.db.close();
+            const db = await this.db.catch(() => undefined);
+            db?.close();
             this.db = undefined;
         }
     }
@@ -99,8 +117,9 @@ export class SqliteConnector extends BaseConnector {
         const placeholders = fields.map(() => "?").join(", ");
         const q = `INSERT INTO ${table} (${fields.join(", ")}) VALUES (${placeholders})`;
 
-        const statement = this.getDatabase().prepare(q);
-        const insertMany = this.getDatabase().transaction((rows: Array<Record<string, any>>) => {
+        const db = await this.getDatabase();
+        const statement = db.prepare(q);
+        const insertMany = db.transaction((rows: Array<Record<string, any>>) => {
             for (const row of rows)
                 statement.run(...fields.map(field => encodeValue(row[field])));
         });

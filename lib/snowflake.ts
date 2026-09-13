@@ -1,9 +1,20 @@
-import snowflake from "snowflake-sdk";
+import type snowflake from "snowflake-sdk";
 import chalk from "chalk";
-import { BaseConnector, logExecute, logExecuteResult, logQueryResult, safeValue, sleep, wrapQueryError } from "./utilities.js";
+import { BaseConnector, interopDefault, loadDriver, logExecute, logExecuteResult, logQueryResult, safeValue, sleep, wrapQueryError } from "./utilities.js";
 
-if (process.env.SNOWFLAKE_DISABLE_LOGGING === "1" ||  process.env.SNOWFLAKE_DISABLE_LOGGING == undefined)
-    snowflake.configure({ logLevel: "OFF" });
+// `snowflake-sdk` is an optional peer dependency, loaded on first use so that
+// importing polysql does not require it to be installed. See `loadDriver`. The
+// SDK's own logging is switched off at load time unless SNOWFLAKE_DISABLE_LOGGING
+// is explicitly set to something other than "1".
+type Driver = typeof import("snowflake-sdk");
+let driver: Promise<Driver> | undefined;
+function loadSnowflake(): Promise<Driver> {
+    return driver ??= loadDriver("snowflake-sdk", "Snowflake", () => import("snowflake-sdk").then(module => interopDefault<Driver>(module))).then(snowflake => {
+        if (process.env.SNOWFLAKE_DISABLE_LOGGING === "1" || process.env.SNOWFLAKE_DISABLE_LOGGING == undefined)
+            snowflake.configure({ logLevel: "OFF" });
+        return snowflake;
+    });
+}
 
 export interface LoadResult {
     file: string;
@@ -38,11 +49,15 @@ export type SnowflakeConfig = snowflake.ConnectionOptions | string;
  * `config` is either a `ConnectionOptions` object or the same
  * "account:a,username:u,password:p,warehouse:WH,..." string the env var uses.
  * `poolMax` defaults to `SNOWFLAKE_POOL_MAX` (or 1), matching the env path.
+ *
+ * The pool (and the `snowflake-sdk` driver itself) is created lazily on the
+ * first `query`/`execute`/`insert`, so constructing a connector never touches
+ * the driver.
  */
 export class SnowflakeConnector extends BaseConnector {
     private connectionOptions: snowflake.ConnectionOptions;
     private poolMax: number;
-    private pool: snowflake.Pool<snowflake.Connection> | undefined;
+    private pool: Promise<snowflake.Pool<snowflake.Connection>> | undefined;
 
     constructor(config: SnowflakeConfig, opts?: { poolMax?: number }) {
         super();
@@ -50,19 +65,23 @@ export class SnowflakeConnector extends BaseConnector {
         this.poolMax = opts?.poolMax ?? (parseInt(process.env.SNOWFLAKE_POOL_MAX!) || 1);
     }
 
-    private getPool(): snowflake.Pool<snowflake.Connection> {
+    private getPool(): Promise<snowflake.Pool<snowflake.Connection>> {
         if (!this.pool) {
-            this.pool = snowflake.createPool(this.connectionOptions, { min: 0, max: this.poolMax });
-            if (process.env.VERBOSE)
-                console.log(chalk.gray(`\nSNOWFLAKE CONNECTION: ${JSON.stringify({ ...this.connectionOptions, password: undefined }, null, 2)}`));
+            this.pool = loadSnowflake().then(snowflake => {
+                const pool = snowflake.createPool(this.connectionOptions, { min: 0, max: this.poolMax });
+                if (process.env.VERBOSE)
+                    console.log(chalk.gray(`\nSNOWFLAKE CONNECTION: ${JSON.stringify({ ...this.connectionOptions, password: undefined }, null, 2)}`));
+                return pool;
+            });
         }
         return this.pool;
     }
 
     async query<T = any>(query: string, params?: any[]): Promise<T[]> {
+        const pool = await this.getPool();
         const t0 = Date.now();
 
-        const rows = await this.getPool().use(async connection => {
+        const rows = await pool.use(async connection => {
             let result: snowflake.RowStatement;
             try {
                 result = await connection.execute({
@@ -88,11 +107,12 @@ export class SnowflakeConnector extends BaseConnector {
     }
 
     async execute(query: string, params?: any[]): Promise<void> {
+        const pool = await this.getPool();
         const t0 = Date.now();
 
         logExecute(query, params);
 
-        await this.getPool().use(async connection => {
+        await pool.use(async connection => {
             const result = await connection.execute({
                 sqlText: query,
                 binds: formatBinds(params)
@@ -133,12 +153,15 @@ export class SnowflakeConnector extends BaseConnector {
      * Drain and dispose the connection pool, releasing its open connections. Call
      * this on shutdown so the process (or a test runner) can exit cleanly instead
      * of hanging on the pool's still-open connections. Safe to call when no pool
-     * was ever created.
+     * was ever created (or the driver failed to load).
      */
     async close(): Promise<void> {
         if (this.pool) {
-            await this.pool.drain();
-            await this.pool.clear();
+            const pool = await this.pool.catch(() => undefined);
+            if (pool) {
+                await pool.drain();
+                await pool.clear();
+            }
             this.pool = undefined;
         }
     }

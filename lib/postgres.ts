@@ -1,6 +1,12 @@
 import pg from "pg";
 import chalk from "chalk";
-import { BaseConnector, logExecute, logExecuteResult, logQuery, logQueryResult, safeValue, wrapQueryError, type Connector } from "./utilities.js";
+import { BaseConnector, logExecute, logExecuteResult, logQuery, logQueryResult, safeValue, wrapQueryError } from "./utilities.js";
+
+// Unlike the other drivers, `pg` is a regular dependency and is imported
+// statically: it is small enough (~95 kB, ~450 kB installed including its
+// dependencies) that bundling it for every consumer costs less than the
+// indirection of lazy loading. The remaining drivers stay optional peers, loaded
+// on first use — see `loadDriver`.
 
 /** Connection info accepted by `PostgresConnector`: either the driver's own
  * pool config object, or a `postgres://user:pass@host:port/db` connection
@@ -14,6 +20,9 @@ export type PostgresConfig = pg.PoolConfig | string;
  *
  * `config` is either a `PoolConfig` object or a `postgres://...` connection
  * string. `poolMax` defaults to `POSTGRES_POOL_MAX` (or the pg default).
+ *
+ * The pool is created on the first `query`/`execute`/`insert`, so constructing a
+ * connector opens no sockets.
  */
 export class PostgresConnector extends BaseConnector {
     private poolConfig: pg.PoolConfig;

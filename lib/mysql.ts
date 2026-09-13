@@ -1,6 +1,14 @@
-import mysql from "mysql2/promise";
+import type mysql from "mysql2/promise";
 import chalk from "chalk";
-import { BaseConnector, logExecute, logExecuteResult, logQuery, logQueryResult, safeValue, wrapQueryError, type Connector } from "./utilities.js";
+import { BaseConnector, interopDefault, loadDriver, logExecute, logExecuteResult, logQuery, logQueryResult, safeValue, wrapQueryError } from "./utilities.js";
+
+// `mysql2` is an optional peer dependency, loaded on first use so that importing
+// polysql does not require it to be installed. See `loadDriver`.
+type Driver = typeof import("mysql2/promise");
+let driver: Promise<Driver> | undefined;
+function loadMysql(): Promise<Driver> {
+    return driver ??= loadDriver("mysql2", "MySQL", () => import("mysql2/promise").then(module => interopDefault<Driver>(module)));
+}
 
 /** Connection info accepted by `MysqlConnector`: either the driver's own pool
  * options object, or a `mysql://user:pass@host:port/db` connection string (the
@@ -14,10 +22,13 @@ export type MysqlConfig = mysql.PoolOptions | string;
  *
  * `config` is either a `PoolOptions` object or a `mysql://...` connection
  * string. `poolMax` defaults to `MYSQL_POOL_MAX` (or the mysql2 default).
+ *
+ * The pool (and the `mysql2` driver itself) is created lazily on the first
+ * `query`/`execute`/`insert`, so constructing a connector never touches the driver.
  */
 export class MysqlConnector extends BaseConnector {
     private poolConfig: mysql.PoolOptions;
-    private pool: mysql.Pool | undefined;
+    private pool: Promise<mysql.Pool> | undefined;
 
     constructor(config: MysqlConfig, opts?: { poolMax?: number }) {
         super();
@@ -27,22 +38,26 @@ export class MysqlConnector extends BaseConnector {
             this.poolConfig.connectionLimit = poolMax;
     }
 
-    private getPool(): mysql.Pool {
+    private getPool(): Promise<mysql.Pool> {
         if (!this.pool) {
-            this.pool = mysql.createPool(this.poolConfig);
-            if (process.env.VERBOSE)
-                console.log(chalk.gray(`\nMYSQL CONNECTION: ${JSON.stringify({ ...this.poolConfig, password: undefined, uri: this.poolConfig.uri ? "***" : undefined }, null, 2)}`));
+            this.pool = loadMysql().then(mysql => {
+                const pool = mysql.createPool(this.poolConfig);
+                if (process.env.VERBOSE)
+                    console.log(chalk.gray(`\nMYSQL CONNECTION: ${JSON.stringify({ ...this.poolConfig, password: undefined, uri: this.poolConfig.uri ? "***" : undefined }, null, 2)}`));
+                return pool;
+            });
         }
         return this.pool;
     }
 
     async query<T = any>(query: string, params?: Record<string, any> | any[]): Promise<T[]> {
+        const pool = await this.getPool();
         const t0 = Date.now();
         logQuery(query, params);
 
         let rows: T[];
         try {
-            const [result] = await this.getPool().query(query, formatBinds(params));
+            const [result] = await pool.query(query, formatBinds(params));
             rows = Array.isArray(result) ? result as T[] : [];
         }
         catch (err) {
@@ -55,11 +70,12 @@ export class MysqlConnector extends BaseConnector {
     }
 
     async execute(query: string, params?: Record<string, any> | any[]): Promise<void> {
+        const pool = await this.getPool();
         const t0 = Date.now();
         logExecute(query, params);
 
         try {
-            await this.getPool().query(query, formatBinds(params));
+            await pool.query(query, formatBinds(params));
         }
         catch (err) {
             throw wrapQueryError(err, query, params);
@@ -72,11 +88,12 @@ export class MysqlConnector extends BaseConnector {
      * Drain and close the connection pool, releasing its open sockets. Call this
      * on shutdown so the process (or a test runner) can exit cleanly instead of
      * hanging on the pool's still-open connections. Safe to call when no pool was
-     * ever created.
+     * ever created (or the driver failed to load).
      */
     async close(): Promise<void> {
         if (this.pool) {
-            await this.pool.end();
+            const pool = await this.pool.catch(() => undefined);
+            await pool?.end();
             this.pool = undefined;
         }
     }

@@ -7,7 +7,7 @@ Instead of juggling different SDKs and connection patterns, PolySQL abstracts aw
 ## Supported Databases
 - **PostgreSQL** - Open-source relational database
 - **MySQL** - Another open-source relational database
-- **Microsoft SQL Server** - Microsoft proprietary relational database engine
+- **SQL Server** - Microsoft proprietary relational database engine
 - **Oracle** - Oracle Database, the long-standing enterprise relational engine
 - **SQLite** - Embedded, file-based (or in-memory) SQL database *(via `better-sqlite3`, or Node's built-in `node:sqlite`)*
 - **DuckDB** - Embedded, file-based (or in-memory) analytical (OLAP) database
@@ -20,7 +20,7 @@ Instead of juggling different SDKs and connection patterns, PolySQL abstracts aw
 
 > MySQL also works with MySQL-compatible databases like MariaDB.
 
-> Each database is reached through its own driver module, installed separately. [See the full list, with versions and install sizes](docs/supported-databases.md)
+> Each database is reached through its own driver module, installed separately. [Learn more](docs/supported-databases.md)
 
 ## Why PolySQL?
 Use one simple, consistent interface instead of learning different APIs for each different database engine.
@@ -61,7 +61,7 @@ const r3 = await mssql.query("SELECT ...");
 - **Parameterized Queries**: Supports safe parameter binding—positional and/or named depending on the database. [Learn more](docs/query-parameters.md)
 
 ## Installation
-`npm install polysql` covers PostgreSQL out of the box — `pg` is small enough (~95 kB) that it ships as a regular dependency. On Node 22.5+ you also get SQLite for free through Node's built-in `node:sqlite`. Add a driver for any other database you use:
+`npm install polysql` covers PostgreSQL out of the box as Postgres is by far the most commonly used of these databases, and `pg` is a very lightweight dependency. On Node 22.5+ you also get SQLite for free through Node's built-in `node:sqlite`. Add a driver for any other database you use:
 
 ```bash
 npm install polysql                 # PostgreSQL + node:sqlite, nothing else needed
@@ -196,7 +196,7 @@ nodesqlite.close();
 
 > Set the `NODE_SQLITE_CONNECTION` environment variable to a value that specifies the path to a local file, or leave unspecified and it will default to an in-memory database.
 
-> Both SQLite backends are synchronous engines that polysql adapts to its async interface, so `await` works the same way on either. [Compare them](docs/supported-databases.md#two-ways-to-reach-sqlite)
+> Both SQLite backends are synchronous engines that polysql adapts to its async interface, so `await` works the same way on either. [Learn more](docs/supported-databases.md#two-ways-to-reach-sqlite)
 
 ## DuckDB example
 ```javascript
@@ -211,7 +211,7 @@ for (const row of rows)
 duckdb.close();
 ```
 
-> Set the `DUCKDB_CONNECTION` environment variable to a value that specifies the path to a local file, or leave unspecified and it will default to an in-memory database.
+> Set the `DUCKDB_CONNECTION` environment variable to a value that specifies the path to a local file, or leave unspecified and it will default to an in-memory database. To use [MotherDuck](https://motherduck.com), DuckDB's hosted service, set it to `md:<database>` (e.g. `md:my_database`) and put your token in `MOTHERDUCK_TOKEN`. [Learn more](docs/supported-databases.md#duckdb-in-the-cloud-motherduck)
 
 ## ClickHouse example
 ```javascript

@@ -12,11 +12,14 @@ sections below document each connector in detail.
 | PostgreSQL | `POSTGRES_CONNECTION` | `postgres://<user>:<password>@<host>:<port>/<database>` |
 | MySQL | `MYSQL_CONNECTION` | `mysql://<user>:<password>@<host>:<port>/<database>` |
 | Microsoft SQL Server | `MSSQL_CONNECTION` | `Server=<host>,<port>;Database=<database>;User Id=<user>;Password=<password>;Encrypt=true` |
+| Oracle | `ORACLE_CONNECTION` | `<user>/<password>@<host>:<port>/<service>` |
+| ClickHouse | `CLICKHOUSE_CONNECTION` | `http://<user>:<password>@<host>:<port>/<database>` (defaults to `http://localhost:8123` when unset) |
+| Databricks SQL | `DATABRICKS_CONNECTION` | `host:<host>,path:<http-path>,token:<token>` |
 | SQLite | `SQLITE_CONNECTION` | file path, or `:memory:` (default when unset) |
 | DuckDB | `DUCKDB_CONNECTION` | file path, or `:memory:` (default when unset) |
 
 Pool size overrides (where supported): `SNOWFLAKE_POOL_MAX`, `POSTGRES_POOL_MAX`,
-`MYSQL_POOL_MAX`, `MSSQL_POOL_MAX`.
+`MYSQL_POOL_MAX`, `MSSQL_POOL_MAX`, `ORACLE_POOL_MAX`, `CLICKHOUSE_POOL_MAX`.
 
 Field names below are **generic placeholders** — substitute your own values.
 Do not include the angle brackets.
@@ -166,6 +169,100 @@ Note that `Encrypt=false` sends credentials and query traffic unencrypted, so
 only use it on a trusted network (e.g. a local dev server). The better fix for
 anything reachable over an untrusted network is to enable a TLS certificate on
 the SQL Server instance and keep `Encrypt=true`.
+
+## Oracle
+
+Set `ORACLE_CONNECTION` to a `user/password@connect-string` value:
+
+```bash
+export ORACLE_CONNECTION="<user>/<password>@<host>:<port>/<service>"
+```
+
+The part after `@` is an Oracle *connect string*. The Easy Connect form above is
+the common case; a TNS alias or a full descriptor works too. A value with no
+`user/password@` prefix is passed through as the connect string on its own, for
+external authentication:
+
+```bash
+export ORACLE_CONNECTION="<host>:<port>/<service>"
+```
+
+The default port is `1521`. On Oracle Free/XE the service name is typically
+`FREEPDB1` (or `XEPDB1` on older images).
+
+Notes on this connector:
+
+- **Column names come back lower-cased.** Oracle reports unquoted identifiers in
+  upper case; polysql lower-cases them so a row reads the same as it does on
+  every other backend — the same normalization the Snowflake connector applies.
+- **`execute` and `insert` commit.** Oracle does not autocommit, so without this
+  any DML would roll back when the connection returned to the pool.
+- **A trailing semicolon is trimmed.** The terminator is a SQL\*Plus convention
+  rather than part of the statement, and Oracle rejects it. A PL/SQL block
+  ending in `END;` keeps its semicolon, since there it is real syntax.
+- The driver runs in **Thin mode** by default and needs no Oracle Client
+  libraries. If you need Thick mode, call `oracledb.initOracleClient()` yourself
+  before the first query.
+
+Optional — cap the connection pool size (defaults to the `oracledb` default
+of 4):
+
+```bash
+export ORACLE_POOL_MAX="<n>"
+```
+
+## ClickHouse
+
+Set `CLICKHOUSE_CONNECTION` to the server URL, with credentials and database
+included:
+
+```bash
+export CLICKHOUSE_CONNECTION="http://<user>:<password>@<host>:<port>/<database>"
+```
+
+Unlike the other remote backends, this one has a working default: leave the
+variable unset and the driver connects to `http://localhost:8123` as the
+`default` user, which is what a local ClickHouse install accepts out of the box.
+
+The default port is `8123` (HTTP) or `8443` (HTTPS — use an `https://` URL for
+ClickHouse Cloud). Driver settings can be appended as query parameters, and the
+URL is parsed by the driver itself rather than by polysql.
+
+Optional — cap the number of concurrent connections (defaults to the driver's
+own limit of 10):
+
+```bash
+export CLICKHOUSE_POOL_MAX="<n>"
+```
+
+## Databricks SQL
+
+Set `DATABRICKS_CONNECTION` to a comma-separated `key:value` string. `host`,
+`path`, and `token` are required:
+
+```bash
+export DATABRICKS_CONNECTION="host:<workspace-host>,path:<http-path>,token:<token>"
+```
+
+- `host` — the workspace hostname with no scheme, e.g.
+  `myworkspace.cloud.databricks.com`.
+- `path` — the warehouse's **HTTP path**, e.g.
+  `/sql/1.0/warehouses/<warehouse-id>`. Find it under *SQL Warehouses →
+  your warehouse → Connection details*.
+- `token` — a personal access token (*Settings → Developer → Access tokens*).
+- `catalog` and `schema` are optional and set the session's initial catalog and
+  schema.
+
+The string format is the same one Snowflake uses, and has the same limits:
+values cannot contain a comma or a colon — which is why `host` takes no
+`https://` prefix. Pass a `ConnectionOptions` object to an explicit instance if
+you need a value that would break the parser, or any auth type other than a
+token (OAuth, for instance). See [Multiple
+Connections](multiple-connections.md).
+
+Unlike the pooled backends there is no `DATABRICKS_POOL_MAX`: the driver holds a
+single session that serializes statements, and concurrency comes from the SQL
+warehouse rather than from local sockets.
 
 ## SQLite
 

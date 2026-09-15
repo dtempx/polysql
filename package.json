@@ -1,7 +1,7 @@
 {
   "name": "polysql",
   "version": "2.0.0",
-  "description": "A simple data adapter that provides a single, consistent interface for querying across PostgreSQL, MySQL, SQL Server, SQLite DuckDB, BigQuery, and Snowflake",
+  "description": "A simple data adapter that provides a single, consistent interface for querying across PostgreSQL, MySQL, SQLite, DuckDB, SQL Server, Oracle, ClickHouse, BigQuery, Databricks, and Snowflake",
   "license": "MIT",
   "type": "module",
   "main": "index.js",
@@ -49,7 +49,10 @@
     "alloydb",
     "timescale",
     "timescaledb",
-    "universal"
+    "universal",
+    "oracle",
+    "clickhouse",
+    "databricks"
   ],
   "scripts": {
     "build": "npx tsc",
@@ -60,14 +63,23 @@
     "pg": "^8.22.0"
   },
   "peerDependencies": {
+    "@clickhouse/client": "^1.23.1",
+    "@databricks/sql": "^2.1.0",
     "@duckdb/node-api": "^1.5.4-r.1",
     "@google-cloud/bigquery": "^8.3.1",
     "better-sqlite3": "^12.11.1",
     "mssql": "^12.7.0",
     "mysql2": "^3.23.0",
+    "oracledb": "^7.0.1",
     "snowflake-sdk": "^3.1.0"
   },
   "peerDependenciesMeta": {
+    "@clickhouse/client": {
+      "optional": true
+    },
+    "@databricks/sql": {
+      "optional": true
+    },
     "@duckdb/node-api": {
       "optional": true
     },
@@ -83,11 +95,16 @@
     "mysql2": {
       "optional": true
     },
+    "oracledb": {
+      "optional": true
+    },
     "snowflake-sdk": {
       "optional": true
     }
   },
   "devDependencies": {
+    "@clickhouse/client": "^1.23.1",
+    "@databricks/sql": "^2.1.0",
     "@duckdb/node-api": "^1.5.4-r.1",
     "@google-cloud/bigquery": "^8.3.1",
     "@types/better-sqlite3": "^7.6.13",
@@ -96,6 +113,7 @@
     "@types/mocha": "^10.0.10",
     "@types/mssql": "^12.3.0",
     "@types/node": "^26.1.1",
+    "@types/oracledb": "^7.0.3",
     "@types/pg": "^8.20.0",
     "better-sqlite3": "^12.11.1",
     "chai": "^6.2.2",
@@ -103,6 +121,7 @@
     "mocha": "^11.7.6",
     "mssql": "^12.7.0",
     "mysql2": "^3.23.0",
+    "oracledb": "^7.0.1",
     "snowflake-sdk": "^3.1.0",
     "tsx": "^4.20.3",
     "typescript": "^7.0.2"

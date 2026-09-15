@@ -1,6 +1,6 @@
 # PolySQL
 
-A simple data adapter that provides a single, consistent interface for querying across PostgreSQL, MySQL, Microsoft SQL Server, SQLite, DuckDB, Snowflake, and BigQuery.
+A simple data adapter that provides a single, consistent interface for querying across PostgreSQL, MySQL, Microsoft SQL Server, Oracle, SQLite, DuckDB, ClickHouse, Snowflake, Databricks, and BigQuery.
 
 Instead of juggling different SDKs and connection patterns, PolySQL abstracts away the complexity so you can focus on your data. Really useful when dealing with more than one database.
 
@@ -8,9 +8,12 @@ Instead of juggling different SDKs and connection patterns, PolySQL abstracts aw
 - **PostgreSQL** - Open-source relational database
 - **MySQL** - Another open-source relational database
 - **Microsoft SQL Server** - Microsoft proprietary relational database engine
+- **Oracle** - Oracle Database, the long-standing enterprise relational engine
 - **SQLite** - Embedded, file-based (or in-memory) SQL database *(via `better-sqlite3`, or Node's built-in `node:sqlite`)*
 - **DuckDB** - Embedded, file-based (or in-memory) analytical (OLAP) database
+- **ClickHouse** - Column-oriented analytical (OLAP) database, self-hosted or ClickHouse Cloud
 - **Snowflake** - Multi-cloud data warehouse *(runs on AWS, Azure, or GCP)*
+- **Databricks SQL** - SQL warehouses on the Databricks lakehouse platform
 - **BigQuery** - Google Cloud's serverless data warehouse
 
 > Postgres also works with databases that speak the PostgreSQL wire protocol—namely CockroachDB, Redshift, YugabyteDB, AlloyDB, TimescaleDB. [Learn more](docs/postgres-compatible-databases.md)
@@ -64,9 +67,12 @@ const r3 = await mssql.query("SELECT ...");
 npm install polysql                 # PostgreSQL + node:sqlite, nothing else needed
 npm install polysql mysql2          # MySQL / MariaDB
 npm install polysql mssql           # Microsoft SQL Server
+npm install polysql oracledb        # Oracle
 npm install polysql better-sqlite3  # SQLite via better-sqlite3
 npm install polysql @duckdb/node-api        # DuckDB
+npm install polysql @clickhouse/client      # ClickHouse
 npm install polysql snowflake-sdk           # Snowflake
+npm install polysql @databricks/sql         # Databricks SQL
 npm install polysql @google-cloud/bigquery  # BigQuery
 ```
 
@@ -81,15 +87,18 @@ The MySQL connector requires the "mysql2" package, which is not installed. Insta
 | `postgres` | `PostgresConnector` | `pg` *(bundled with polysql)* |
 | `mysql` | `MysqlConnector` | `mysql2` |
 | `mssql` | `MssqlConnector` | `mssql` |
+| `oracle` | `OracleConnector` | `oracledb` |
 | `sqlite` | `SqliteConnector` | `better-sqlite3` |
 | `nodesqlite` | `NodeSqliteConnector` | `node:sqlite` *(built into Node 22.5+)* |
 | `duckdb` | `DuckDBConnector` | `@duckdb/node-api` |
+| `clickhouse` | `ClickHouseConnector` | `@clickhouse/client` |
 | `snowflake` | `SnowflakeConnector` | `snowflake-sdk` |
+| `databricks` | `DatabricksConnector` | `@databricks/sql` |
 | `bigquery` | `BigQueryConnector` | `@google-cloud/bigquery` |
 
 > Versions, install footprint, and memory cost for each driver are in [Supported Databases](docs/supported-databases.md).
 
-> For TypeScript, `mssql` ships its types separately: add `@types/mssql` alongside it. `@types/pg` comes with polysql.
+> For TypeScript, `mssql` and `oracledb` ship their types separately: add `@types/mssql` and `@types/oracledb` alongside them. `@types/pg` comes with polysql.
 
 ## Quick Start
 Each connector's default instance reads its connection info from an environment variable. The formats for every connector are documented in [Environment Variables](docs/environment-variables.md).
@@ -139,6 +148,23 @@ mssql.close();
 
 > Set the `MSSQL_CONNECTION` environment variable to a value like `Server=localhost,1433;Database=mydb;User Id=myuser;Password=mypass;Encrypt=true` or `mssql://myuser:mypass@localhost:1433/mydb`.
 
+## Oracle example
+```javascript
+import { oracle } from "polysql";
+
+await oracle.execute("CREATE TABLE users (id NUMBER, name VARCHAR2(255))");
+await oracle.insert("users", [{ id: 1, name: "Alice" }, { id: 2, name: "Bob" }]);
+
+const rows = await oracle.query("SELECT * FROM users WHERE id = :0", [1]);
+for (const row of rows)
+    console.log(JSON.stringify(row));
+oracle.close();
+```
+
+> Set the `ORACLE_CONNECTION` environment variable to a value like `myuser/mypass@localhost:1521/FREEPDB1`.
+
+> Column names come back lower-cased, so `SELECT id FROM users` gives you `row.id` regardless of how Oracle reports the column. Oracle has no autocommit, so `execute` and `insert` commit on your behalf.
+
 ## SQLite example
 ```javascript
 import { sqlite } from "polysql";
@@ -187,6 +213,23 @@ duckdb.close();
 
 > Set the `DUCKDB_CONNECTION` environment variable to a value that specifies the path to a local file, or leave unspecified and it will default to an in-memory database.
 
+## ClickHouse example
+```javascript
+import { clickhouse } from "polysql";
+
+await clickhouse.execute("CREATE TABLE IF NOT EXISTS users (id UInt32, name String) ENGINE = MergeTree ORDER BY id");
+await clickhouse.insert("users", [{ id: 1, name: "Alice" }, { id: 2, name: "Bob" }]);
+
+const rows = await clickhouse.query("SELECT * FROM users WHERE id = {p0:UInt32}", [1]);
+for (const row of rows)
+    console.log(JSON.stringify(row));
+clickhouse.close();
+```
+
+> Set the `CLICKHOUSE_CONNECTION` environment variable to a value like `http://myuser:mypass@localhost:8123/mydb`. When unset it defaults to `http://localhost:8123` as the `default` user.
+
+> ClickHouse binds by name only, and every placeholder carries its type — `{name:Type}`. Positional array values are bound as `{p0:Type}`, `{p1:Type}`, … [Learn more](docs/query-parameters.md)
+
 ## Snowflake example
 ```javascript
 import { snowflake } from "polysql";
@@ -200,6 +243,20 @@ snowflake.close();
 ```
 
 > Set the `SNOWFLAKE_CONNECTION` environment variable to a value like `account:myaccount,username:myuser,authenticator:SNOWFLAKE_JWT,privateKeyPath:/path/to/rsa_key.p8,database:mydb,warehouse:mywh`. See [Environment Variables](docs/environment-variables.md#snowflake) for details on key-pair authentication.
+
+## Databricks example
+```javascript
+import { databricks } from "polysql";
+
+const sql = "SELECT * FROM samples.nyctaxi.trips LIMIT 10";
+
+const rows = await databricks.query(sql);
+for (const row of rows)
+    console.log(JSON.stringify(row));
+databricks.close();
+```
+
+> Set the `DATABRICKS_CONNECTION` environment variable to a value like `host:myworkspace.cloud.databricks.com,path:/sql/1.0/warehouses/abc123,token:dapi...`. See [Environment Variables](docs/environment-variables.md#databricks-sql) for details.
 
 ## BigQuery example
 ```javascript

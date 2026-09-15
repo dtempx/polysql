@@ -72,7 +72,7 @@ When the target backend isn't known until runtime — for example it comes from 
 ```javascript
 import { connect, connectorNames } from "polysql";
 
-console.log(connectorNames);          // ["bigquery", "mssql", "mysql", "postgres", "snowflake", "sqlite"]
+console.log(connectorNames);          // ["bigquery", "clickhouse", "databricks", "duckdb", "mssql", "mysql", "nodesqlite", "oracle", "postgres", "snowflake", "sqlite"]
 
 // Omit config to use the backend's environment-driven default instance.
 const db = connect(appConfig.database);   // e.g. "snowflake"

@@ -23,9 +23,12 @@ Two of the drivers below are exceptions, for opposite reasons:
 | Postgres | PostgreSQL, CockroachDB, Amazon Redshift, YugabyteDB, AlloyDB, TimescaleDB | Remote | `PostgresConnector`<br>`POSTGRES_CONNECTION` | [`pg`](https://www.npmjs.com/package/pg) *(bundled)*<br>`^8.22.0`<br>463 kB on disk<br>~9 MB in memory<br>13 dependencies |
 | MySQL | MySQL, MariaDB | Remote | `MysqlConnector`<br>`MYSQL_CONNECTION` | [`mysql2`](https://www.npmjs.com/package/mysql2)<br>`^3.23.0`<br>4.0 MB on disk<br>~20 MB in memory<br>11 dependencies |
 | SQL Server | Microsoft SQL Server, Azure SQL | Remote | `MssqlConnector`<br>`MSSQL_CONNECTION` | [`mssql`](https://www.npmjs.com/package/mssql)<br>`^12.7.0`<br>48.1 MB on disk<br>~39 MB in memory<br>73 dependencies |
+| Oracle | Oracle Database *(incl. Autonomous Database)* | Remote | `OracleConnector`<br>`ORACLE_CONNECTION` | [`oracledb`](https://www.npmjs.com/package/oracledb)<br>`^7.0.1`<br>4.1 MB on disk<br>~15 MB in memory<br>no dependencies |
 | SQLite | SQLite *(built-in or packaged)* | Local | `NodeSqliteConnector`<br>`NODE_SQLITE_CONNECTION`<br><br>`SqliteConnector`<br>`SQLITE_CONNECTION` | [`node:sqlite`](https://nodejs.org/api/sqlite.html) *(built into Node)*<br>Node ≥ 22.5.0<br>nothing on disk<br>~2 MB in memory<br>no dependencies<br><br>[`better-sqlite3`](https://www.npmjs.com/package/better-sqlite3)<br>`^12.11.1`<br>26.4 MB on disk<br>~4.5 MB in memory<br>1 dependency |
 | DuckDB | DuckDB, MotherDuck | Local or Remote | `DuckDBConnector`<br>`DUCKDB_CONNECTION` | [`@duckdb/node-api`](https://www.npmjs.com/package/@duckdb/node-api)<br>`^1.5.4-r.1`<br>61.3 MB on disk<br>~27 MB in memory<br>3 dependencies |
+| ClickHouse | ClickHouse, ClickHouse Cloud | Remote | `ClickHouseConnector`<br>`CLICKHOUSE_CONNECTION` | [`@clickhouse/client`](https://www.npmjs.com/package/@clickhouse/client)<br>`^1.23.1`<br>1.7 MB on disk<br>~14 MB in memory<br>no dependencies |
 | Snowflake | Snowflake *(on AWS, Azure, or GCP)* | Remote | `SnowflakeConnector`<br>`SNOWFLAKE_CONNECTION` | [`snowflake-sdk`](https://www.npmjs.com/package/snowflake-sdk)<br>`^3.1.0`<br>74.3 MB on disk<br>~62 MB in memory<br>178 dependencies |
+| Databricks SQL | Databricks SQL warehouses, all-purpose clusters | Remote | `DatabricksConnector`<br>`DATABRICKS_CONNECTION` | [`@databricks/sql`](https://www.npmjs.com/package/@databricks/sql)<br>`^2.1.0`<br>53 MB on disk<br>~37 MB in memory<br>11 dependencies |
 | BigQuery | Google BigQuery | Remote | `BigQueryConnector`<br>`GOOGLE_APPLICATION_CREDENTIALS` | [`@google-cloud/bigquery`](https://www.npmjs.com/package/@google-cloud/bigquery)<br>`^8.3.1`<br>12.1 MB on disk<br>~23 MB in memory<br>46 dependencies |
 
 **Location** is where the data lives. *Local* drivers embed the database engine
@@ -185,9 +188,12 @@ Two smaller differences polysql smooths over on the `nodesqlite` side:
 npm install polysql                         # PostgreSQL + node:sqlite, nothing else needed
 npm install polysql mysql2                  # MySQL / MariaDB
 npm install polysql mssql                   # Microsoft SQL Server
+npm install polysql oracledb                # Oracle
 npm install polysql better-sqlite3          # SQLite via better-sqlite3
 npm install polysql @duckdb/node-api        # DuckDB
+npm install polysql @clickhouse/client      # ClickHouse
 npm install polysql snowflake-sdk           # Snowflake
+npm install polysql @databricks/sql         # Databricks SQL
 npm install polysql @google-cloud/bigquery  # BigQuery
 ```
 
@@ -198,9 +204,10 @@ naming the package to install:
 The MySQL connector requires the "mysql2" package, which is not installed. Install it with: npm install mysql2
 ```
 
-For TypeScript, `mssql` ships its types separately — add `@types/mssql` alongside
-it. `@types/pg` comes with polysql already, because the published types expose
-`pg.PoolConfig`. The remaining drivers bundle their own.
+For TypeScript, `mssql` and `oracledb` ship their types separately — add
+`@types/mssql` and `@types/oracledb` alongside them. `@types/pg` comes with
+polysql already, because the published types expose `pg.PoolConfig`. The
+remaining drivers bundle their own.
 
 ## See also
 

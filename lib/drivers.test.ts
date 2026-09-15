@@ -16,9 +16,12 @@ const dir = path.dirname(fileURLToPath(import.meta.url));
 // statically, and is covered by its own tests below.
 const drivers: Record<string, string> = {
     bigquery: "@google-cloud/bigquery",
+    clickhouse: "@clickhouse/client",
+    databricks: "@databricks/sql",
     duckdb: "@duckdb/node-api",
     mssql: "mssql",
     mysql: "mysql2",
+    oracle: "oracledb",
     snowflake: "snowflake-sdk",
     sqlite: "better-sqlite3"
 };
